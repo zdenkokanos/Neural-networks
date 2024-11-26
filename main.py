@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-import time
 import matplotlib.pyplot as plt
-import numpy as np
+
 
 # Hyperparameters
 INPUT_SIZE = 28*28
@@ -14,7 +13,7 @@ FC2_SIZE = 256
 OUTPUT_SIZE = 10
 LEARNING_RATE = 0.001
 BATCH_SIZE = 64
-NUM_OF_EPOCHS = 10
+NUM_OF_EPOCHS = 5
 
 # Download the MNIST Dataset if not downloaded yet
 transform = transforms.ToTensor()  # Converts image to tensor with values in range [0, 1]
@@ -40,63 +39,80 @@ class NeuralNetwork(nn.Module):
         x = self.fc3(x)
         return x
 
+def initialize_optimizer():
+    optimizer_type = input("What optimizing algorithm would you like to use? ('adam', 'sgd', 'sgd_momentum'): \n")
+    if optimizer_type == 'adam':
+        return optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    elif optimizer_type == 'sgd':
+        return optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    elif optimizer_type == 'sgd_momentum':
+        return optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9)
+
 
 model = NeuralNetwork()
-
 criterion = nn.CrossEntropyLoss()
-optimize_ADAM = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-optimize_SGD = optim.SGD(model.parameters(), lr=LEARNING_RATE)
-optimize_SGD_Momentum = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=0.9)
+optimizer = initialize_optimizer()
 
-optimizer = optimize_ADAM
+# Track losses for plotting
+training_losses = []
+testing_losses = []
 
-time_s = time.time()
 for epoch in range(NUM_OF_EPOCHS):
     model.train()  # Set model to training mode
     running_loss = 0.0
     correct = 0
     total = 0
 
-    for inputs, targets in train_loader:
+    for image_inputs, targets in train_loader:
         optimizer.zero_grad()  # Zero the gradients
-
-        # Forward pass
-        outputs = model(inputs)
-
-        # Compute loss
-        loss = criterion(outputs, targets)
-
-        # Backpropagation
-        loss.backward()
-
-        # Update weights
-        optimizer.step()
+        outputs = model(image_inputs)  # Forward pass
+        loss = criterion(outputs, targets)  # Compute loss
+        loss.backward()  # Backpropagation
+        optimizer.step()  # Update weights
 
         running_loss += loss.item()  # Track loss
 
         # Track accuracy
-        _, predicted = torch.max(outputs, 1)
+        _, predicted_num = torch.max(outputs, 1)
         total += targets.size(0)
-        correct += (predicted == targets).sum().item()
 
+        for i in range(len(predicted_num)):
+            if predicted_num[i] == targets[i]:  # Compare predictions with targets
+                correct += 1
+
+    training_loss = running_loss / len(train_loader)
+    training_losses.append(training_loss)
     # Calculate and print training stats
-    avg_loss = running_loss / len(train_loader)
     train_accuracy = 100 * correct / total
-    print(f"Epoch [{epoch + 1}/{NUM_OF_EPOCHS}], Loss: {avg_loss:.4f}, Accuracy: {train_accuracy:.2f}%")
+    print(f"Epoch [{epoch + 1}/{NUM_OF_EPOCHS}], Accuracy: {train_accuracy:.2f}%")
 
     # Evaluate on the test set after each epoch
     model.eval()  # Set model to evaluation mode
     correct = 0
     total = 0
+    test_loss = 0.0
     with torch.no_grad():  # No need to compute gradients during evaluation
-        for inputs, targets in test_loader:
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs, 1)
+        for image_inputs, targets in test_loader:
+            output = model(image_inputs)
+            loss = criterion(output, targets)
+            _, predicted_num = torch.max(output, 1)  # returns the maximum values and its index
             total += targets.size(0)
-            correct += (predicted == targets).sum().item()
 
+            test_loss += loss.item()  # Accumulate test loss
+            for i in range(len(predicted_num)):  # Loop over the indices of the batch
+                if predicted_num[i] == targets[i]:  # Compare predictions with targets
+                    correct += 1
+
+    test_loss /= len(test_loader)
+    testing_losses.append(test_loss)
     test_accuracy = 100 * correct / total
     print(f"Test Accuracy after Epoch {epoch + 1}: {test_accuracy:.2f}%\n")
 
-print(time_s - time.time())
-
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, NUM_OF_EPOCHS + 1), training_losses, label="Training Loss")
+plt.plot(range(1, NUM_OF_EPOCHS + 1), testing_losses, label="Testing Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Training and Testing Loss Over Epochs")
+plt.legend()
+plt.show()
