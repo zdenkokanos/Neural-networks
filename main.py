@@ -13,9 +13,11 @@ FC2_SIZE = 256
 OUTPUT_SIZE = 10
 LEARNING_RATE = 0.001
 BATCH_SIZE = 64
-NUM_OF_EPOCHS = 5
+NUM_OF_EPOCHS = 6
 
 # Download the MNIST Dataset if not downloaded yet
+# part of downloading and loading dataset is from website:
+# https://medium.com/@bpoyeka1/building-simple-neural-networks-nn-cnn-using-pytorch-for-mnist-dataset-31e459d17788
 transform = transforms.ToTensor()  # Converts image to tensor with values in range [0, 1]
 train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
 test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
@@ -33,10 +35,10 @@ class NeuralNetwork(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = x.view(-1, 28 * 28)  # Flatten into 1D vector
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = x.view(-1, 28 * 28)  # Flatten into 1D vector / Input layer
+        x = self.relu(self.fc1(x))  # Passed into first hidden layer
+        x = self.relu(self.fc2(x))   # Passed into second hidden layer
+        x = self.fc3(x)  # Passed into output layer
         return x
 
 def initialize_optimizer():
@@ -56,6 +58,7 @@ optimizer = initialize_optimizer()
 # Track losses for plotting
 training_losses = []
 testing_losses = []
+testing_accuracies = []
 
 for epoch in range(NUM_OF_EPOCHS):
     model.train()  # Set model to training mode
@@ -106,6 +109,7 @@ for epoch in range(NUM_OF_EPOCHS):
     test_loss /= len(test_loader)
     testing_losses.append(test_loss)
     test_accuracy = 100 * correct / total
+    testing_accuracies.append(test_accuracy)
     print(f"Test Accuracy after Epoch {epoch + 1}: {test_accuracy:.2f}%\n")
 
 plt.figure(figsize=(10, 5))
