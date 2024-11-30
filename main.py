@@ -5,19 +5,19 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-
 # Hyperparameters
 INPUT_SIZE = 28*28
-FC1_SIZE = 512
-FC2_SIZE = 256
+FC1_SIZE = 256
+FC2_SIZE = 64
 OUTPUT_SIZE = 10
 LEARNING_RATE = 0.001
 BATCH_SIZE = 64
 NUM_OF_EPOCHS = 6
 
-# Download the MNIST Dataset if not downloaded yet
-# part of downloading and loading dataset is from website:
+#####################################################################################################################
+# Part of downloading and loading dataset is from website:
 # https://medium.com/@bpoyeka1/building-simple-neural-networks-nn-cnn-using-pytorch-for-mnist-dataset-31e459d17788
+# Download the MNIST Dataset if not downloaded yet
 transform = transforms.ToTensor()  # Converts image to tensor with values in range [0, 1]
 train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
 test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
@@ -25,6 +25,9 @@ test_dataset = datasets.MNIST(root='./data', train=False, download=True, transfo
 # Load the datasets into DataLoader
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+#####################################################################################################################
+# https://medium.com/@bpoyeka1/building-simple-neural-networks-nn-cnn-using-pytorch-for-mnist-dataset-31e459d17788
+# Structure was inspired by website above, except that everything is done by me
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
@@ -52,7 +55,7 @@ def initialize_optimizer():
 
 
 model = NeuralNetwork()
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss()  # default loss function to use for multi-class classification problems
 optimizer = initialize_optimizer()
 
 # Track losses for plotting
