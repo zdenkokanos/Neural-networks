@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 # Hyperparameters
 INPUT_SIZE = 28*28
-FC1_SIZE = 256
+FC1_SIZE = 512
 FC2_SIZE = 64
 OUTPUT_SIZE = 10
 LEARNING_RATE = 0.001
 BATCH_SIZE = 64
-NUM_OF_EPOCHS = 6
+NUM_OF_EPOCHS = 10
 
 #####################################################################################################################
 # Part of downloading and loading dataset is from website:
@@ -35,13 +35,13 @@ class NeuralNetwork(nn.Module):
         self.fc1 = nn.Linear(INPUT_SIZE, FC1_SIZE)  # First hidden layer (784 -> 256)
         self.fc2 = nn.Linear(FC1_SIZE, FC2_SIZE)  # Second hidden layer (256 -> 64)
         self.fc3 = nn.Linear(FC2_SIZE, OUTPUT_SIZE)  # Output layer (64 -> 10)
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)  # Flatten into 1D vector / Input layer
         x = self.relu(self.fc1(x))  # Passed into first hidden layer
         x = self.relu(self.fc2(x))   # Passed into second hidden layer
-        x = self.fc3(x)  # Passed into output layer
+        x = self.relu(self.fc3(x))  # Passed into output layer
         return x
 
 def initialize_optimizer():
@@ -55,8 +55,8 @@ def initialize_optimizer():
 
 
 model = NeuralNetwork()
-criterion = nn.CrossEntropyLoss()  # default loss function to use for multi-class classification problems
 optimizer = initialize_optimizer()
+criterion = nn.CrossEntropyLoss()  # default loss function to use for multi-class classification problems
 
 # Track losses for plotting
 training_losses = []
@@ -115,11 +115,25 @@ for epoch in range(NUM_OF_EPOCHS):
     testing_accuracies.append(test_accuracy)
     print(f"Test Accuracy after Epoch {epoch + 1}: {test_accuracy:.2f}%\n")
 
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, NUM_OF_EPOCHS + 1), training_losses, label="Training Loss")
-plt.plot(range(1, NUM_OF_EPOCHS + 1), testing_losses, label="Testing Loss")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.title("Training and Testing Loss Over Epochs")
-plt.legend()
+
+# Used Chat-GPT to display visualization
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+
+# Plotting Training and Testing Loss
+ax1.plot(range(1, NUM_OF_EPOCHS + 1), training_losses, label="Training Loss")
+ax1.plot(range(1, NUM_OF_EPOCHS + 1), testing_losses, label="Testing Loss")
+ax1.set_xlabel("Epochs")
+ax1.set_ylabel("Loss")
+ax1.set_title("Training and Testing Loss Over Epochs")
+ax1.legend()
+
+# Plotting Testing Accuracy
+ax2.plot(range(1, NUM_OF_EPOCHS + 1), testing_accuracies, label="Testing Accuracy", color='orange')
+ax2.set_xlabel("Epochs")
+ax2.set_ylabel("Accuracy (%)")
+ax2.set_title("Testing Accuracy Over Epochs")
+ax2.legend()
+
+# Show both plots side by side
+plt.tight_layout()
 plt.show()
