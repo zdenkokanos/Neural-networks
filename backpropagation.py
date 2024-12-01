@@ -5,42 +5,49 @@ import matplotlib.pyplot as plt
 # MSE class for Mean Squared Error loss
 class MSE:
     def __init__(self):
-        self.output = None
+        self.forward_output = None
 
     def compute_loss(self, predicted, target):
-        self.output = (predicted - target)
-        return np.mean(self.output ** 2)
+        self.forward_output = (predicted - target)
+        return np.mean(self.forward_output ** 2)
 
-    def compute_gradient(self, predicted, target):
-        return 2 * self.output / self.output.size
+    def compute_gradient(self):
+        return 2 * self.forward_output / self.forward_output.size
 
 class Tanh:
     def __init__(self):
-        self.output = None
+       self.forward_output = None
 
     def forward(self, x):
-        self.output = np.tanh(x)
-        return self.output
+        self.forward_output = np.tanh(x)
+        return self.forward_output
 
     def backward(self, x, _):
-        return x * (1 - self.output ** 2)
+        return x * (1 - self.forward_output ** 2)
 
 class ReLU:
+    def __init__(self):
+        self.forward_output = None
+
     def forward(self, x):
-        self.output = np.maximum(0, x)
-        return self.output
+        self.forward_output = np.maximum(0, x)
+        return self.forward_output
 
     def backward(self, gradient, _):
-        return gradient * (self.output > 0)
+        return gradient * (self.forward_output > 0)
 
 
 class Sigmoid:
+    def __init__(self):
+        self.forward_output = None
+
     def forward(self, x):
-        return 1 / (1 + np.exp(-x))
+        self.forward_output = 1 / (1 + np.exp(-x))
+        return self.forward_output
 
     def backward(self, x, learning_rate):  # derivation
         s = self.forward(x)
-        return x * s * (1 - s)
+        return x * self.forward_output * (1 - self.forward_output)
 ################################################################################################################
 
 class Linear:  # fully-connected layer in practice usually named Linear
@@ -65,11 +72,8 @@ class Linear:  # fully-connected layer in practice usually named Linear
         return np.dot(gradient, self.weights.T)
 
 class NeuralNetwork:
-    def __init__(self):
-        self.layers = [Linear(2, 4),
-                       Tanh(),
-                       Linear(4, 1),
-                       Tanh()]
+    def __init__(self, layers):
+        self.layers = layers
 
     def forward(self, x):
         for layer in self.layers:
@@ -90,7 +94,7 @@ def train(model, inputs, targets, epochs, learning_rate):
         loss = loss_function.compute_loss(outputs, targets)
 
         loss_array.append(loss)
-        gradient = loss_function.compute_gradient(outputs, targets)
+        gradient = loss_function.compute_gradient()
 
         model.backward(gradient, learning_rate)
 
@@ -98,9 +102,30 @@ def train(model, inputs, targets, epochs, learning_rate):
             print(f"Epoch {epoch}, Loss: {loss:.4f}")
 
 
+function = input("Zadaj 'AND', 'OR' alebo 'XOR': ")
+if function == "AND":
+    target = np.array([[0], [0], [0], [1]])
+elif function == "OR":
+    target = np.array([[0], [1], [1], [1]])
+else:
+    target = np.array([[0], [1], [1], [0]])
+
+num_layers = int(input("Zadaj 1 pre 1 skrytú vrstvu alebo 2 pre dve skryté vrstvy: "))
+if num_layers == 1:
+    layers = [Linear(2, 4),
+              Tanh(),
+              Linear(4, 1),
+              Tanh()]
+else:
+    layers = [Linear(2, 4),
+              Tanh(),
+              Linear(4, 4),
+              Tanh(),
+              Linear(4, 1),
+              Tanh()]
+
 input_value = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-target = np.array([[0], [1], [1], [0]])
-model = NeuralNetwork()
+model = NeuralNetwork(layers)
 train(model, input_value, target, 500, 0.1)
 
 for input in input_value:
