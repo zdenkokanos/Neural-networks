@@ -22,8 +22,8 @@ class Tanh:
         self.forward_output = np.tanh(x)
         return self.forward_output
 
-    def backward(self, x, _):
-        return x * (1 - self.forward_output ** 2)
+    def backward(self, gradient):
+        return gradient * (1 - self.forward_output ** 2)
 
 class ReLU:
     def __init__(self):
@@ -33,7 +33,7 @@ class ReLU:
         self.forward_output = np.maximum(0, x)
         return self.forward_output
 
-    def backward(self, gradient, _):
+    def backward(self, gradient):
         return gradient * (self.forward_output > 0)
 
 
@@ -45,29 +45,36 @@ class Sigmoid:
         self.forward_output = 1 / (1 + np.exp(-x))
         return self.forward_output
 
-    def backward(self, x, learning_rate):  # derivation
-        s = self.forward(x)
-        return x * self.forward_output * (1 - self.forward_output)
+    def backward(self, gradient):  # derivation
+        return gradient * self.forward_output * (1 - self.forward_output)
 ################################################################################################################
 
 class Linear:  # fully-connected layer in practice usually named Linear
     def __init__(self, input_size, output_size):
         self.weights = np.random.randn(input_size, output_size)
         self.bias = np.zeros((1, output_size))
+        self.accumulated_weight_gradient = np.zeros_like(self.weights)
+        self.accumulated_bias_gradient = np.zeros_like(self.bias)
         self.input_val = None
 
     def forward(self, input_val):
         self.input_val = input_val
         return np.dot(input_val, self.weights) + self.bias
 
-    def backward(self, gradient, learning_rate):
+    def backward(self, gradient, learning_rate, momentum):
         # Compute gradients for weights and bias
         grad_weights = np.dot(self.input_val.T, gradient)
-        grad_bias = np.sum(gradient, axis=0, keepdims=True)
+        grad_bias = np.sum(gradient, axis=0)
 
         # Update weights and biases
-        self.weights -= learning_rate * grad_weights
-        self.bias -= learning_rate * grad_bias
+        if with_momentum:
+            self.accumulated_weight_gradient = momentum * self.accumulated_weight_gradient - learning_rate * grad_weights
+            self.accumulated_bias_gradient = momentum * self.accumulated_bias_gradient - learning_rate * grad_bias
+            self.weights += self.accumulated_weight_gradient
+            self.bias += self.accumulated_bias_gradient
+        else:
+            self.weights -= learning_rate * grad_weights
+            self.bias -= learning_rate * grad_bias
 
         return np.dot(gradient, self.weights.T)
 
@@ -80,15 +87,18 @@ class NeuralNetwork:
             x = layer.forward(x)
         return x
 
-    def backward(self, gradient, learning_rate):
+    def backward(self, gradient, learning_rate, momentum):
         for layer in reversed(self.layers):
-            gradient = layer.backward(gradient, learning_rate)
+            if isinstance(layer, Linear):
+                gradient = layer.backward(gradient, learning_rate, momentum)
+            else:
+                gradient = layer.backward(gradient)
 
 
 loss_array = []  # for plotting
 loss_function = MSE()
 
-def train(model, inputs, targets, epochs, learning_rate):
+def train(model, inputs, targets, epochs, learning_rate, momentum):
     for epoch in range(epochs):
         outputs = model.forward(inputs)
         loss = loss_function.compute_loss(outputs, targets)
@@ -96,7 +106,7 @@ def train(model, inputs, targets, epochs, learning_rate):
         loss_array.append(loss)
         gradient = loss_function.compute_gradient()
 
-        model.backward(gradient, learning_rate)
+        model.backward(gradient, learning_rate, momentum)
 
         if epoch % 100 == 0:
             print(f"Epoch {epoch}, Loss: {loss:.4f}")
@@ -124,9 +134,11 @@ else:
               Linear(4, 1),
               Tanh()]
 
+with_momentum = int(input("Zadaj '1' pre optimalizáciu s momentom alebo '0' pre optimalizáciu bez: "))
 input_value = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+momentum = 0.9
 model = NeuralNetwork(layers)
-train(model, input_value, target, 500, 0.1)
+train(model, input_value, target, 500, 0.1, momentum)
 
 for input in input_value:
     result = model.forward(input)
@@ -136,6 +148,6 @@ plt.figure(figsize=(10, 5))
 plt.plot(range(1, 500 + 1), loss_array, label="Training Loss")
 plt.xlabel("Epochs")
 plt.ylabel("Loss")
-plt.title("Training and Testing Loss Over Epochs")
+plt.title("Training Loss Over Epochs")
 plt.legend()
 plt.show()
